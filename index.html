@@ -375,6 +375,10 @@
 
                     <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
                         <h4 style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 15px;">Game+ Detaylı Funnel Analiz Tablosu:</h4>
+                        <!-- CHART EKLENDİ (ÖNCEKİ VERSİYONDA EKSİKTİ VE HATA VERİYORDU) -->
+                        <div style="height: 250px; margin-bottom: 20px;">
+                            <canvas id="funnelChart"></canvas>
+                        </div>
                         <div class="table-container" style="margin:0;">
                             <table>
                                 <thead>
@@ -700,63 +704,74 @@
             document.querySelectorAll('section').forEach(section => observer.observe(section));
 
             // GRAFİKLER
-            
-            // 1. Funnel Chart
-            const funnelCtx = document.getElementById('funnelChart').getContext('2d');
-            new Chart(funnelCtx, {
-                type: 'bar',
-                data: {
-                    labels: ['Landing (100%)', 'Paket Seçimi (65%)', 'Giriş/Kayıt (40%)', 'Ödeme (25%)', 'İlk Oyun (18%)'],
-                    datasets: [{
-                        label: 'Kullanıcı Akışı',
-                        data: [100, 65, 40, 25, 18],
-                        backgroundColor: [
-                            '#00E867', 
-                            '#00E867',
-                            'rgba(0, 232, 103, 0.6)',
-                            'rgba(0, 232, 103, 0.4)',
-                            'rgba(0, 232, 103, 0.2)'
-                        ],
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { callbacks: { label: (ctx) => `${ctx.raw}% Tamamlama` } },
-                        datalabels: { anchor: 'end', align: 'end', formatter: (val) => `%${val}` }
-                    },
-                    scales: { x: { display: false, max: 110 }, y: { grid: { display: false } } }
-                }
-            });
 
-            // 2. Radar Chart
-            const radarCtx = document.getElementById('radarChart').getContext('2d');
-            new Chart(radarCtx, {
-                type: 'radar',
-                data: {
-                    labels: ['Maliyet', 'Funnel', 'Veri Saklama', 'AI İçgörü', 'Kullanım Kolaylığı', 'Trafik Limiti'],
-                    datasets: [{
-                        label: 'Clarity (Free)',
-                        data: [10, 2, 4, 3, 9, 10],
-                        backgroundColor: 'rgba(0, 120, 212, 0.2)',
-                        borderColor: '#0078D4',
-                        pointBackgroundColor: '#0078D4'
-                    }, {
-                        label: 'Hotjar (Paid)',
-                        data: [4, 10, 8, 9, 7, 6],
-                        backgroundColor: 'rgba(253, 56, 93, 0.2)',
-                        borderColor: '#FD385D',
-                        pointBackgroundColor: '#FD385D'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: { r: { suggestMin: 0, suggestMax: 10, ticks: { display: false } } }
-                }
-            });
+            // 1. Funnel Chart (Güvenli Kontrol ile)
+            const funnelCanvas = document.getElementById('funnelChart');
+            if (funnelCanvas) {
+                const funnelCtx = funnelCanvas.getContext('2d');
+                new Chart(funnelCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Landing (100%)', 'Paket Seçimi (65%)', 'Giriş/Kayıt (40%)', 'Ödeme (25%)', 'İlk Oyun (18%)'],
+                        datasets: [{
+                            label: 'Kullanıcı Akışı',
+                            data: [100, 65, 40, 25, 18],
+                            backgroundColor: [
+                                '#00E867', 
+                                '#00E867',
+                                'rgba(0, 232, 103, 0.6)',
+                                'rgba(0, 232, 103, 0.4)',
+                                'rgba(0, 232, 103, 0.2)'
+                            ],
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { callbacks: { label: (ctx) => `${ctx.raw}% Tamamlama` } },
+                            datalabels: { anchor: 'end', align: 'end', formatter: (val) => `%${val}` }
+                        },
+                        scales: { x: { display: false, max: 110 }, y: { grid: { display: false } } }
+                    }
+                });
+            } else {
+                console.warn("funnelChart canvas elementi bulunamadı.");
+            }
+
+            // 2. Radar Chart (Güvenli Kontrol ile)
+            const radarCanvas = document.getElementById('radarChart');
+            if (radarCanvas) {
+                const radarCtx = radarCanvas.getContext('2d');
+                new Chart(radarCtx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Maliyet', 'Funnel', 'Veri Saklama', 'AI İçgörü', 'Kullanım Kolaylığı', 'Trafik Limiti'],
+                        datasets: [{
+                            label: 'Clarity (Free)',
+                            data: [10, 2, 4, 3, 9, 10],
+                            backgroundColor: 'rgba(0, 120, 212, 0.2)',
+                            borderColor: '#0078D4',
+                            pointBackgroundColor: '#0078D4'
+                        }, {
+                            label: 'Hotjar (Paid)',
+                            data: [4, 10, 8, 9, 7, 6],
+                            backgroundColor: 'rgba(253, 56, 93, 0.2)',
+                            borderColor: '#FD385D',
+                            pointBackgroundColor: '#FD385D'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: { r: { suggestMin: 0, suggestMax: 10, ticks: { display: false } } }
+                    }
+                });
+            } else {
+                console.warn("radarChart canvas elementi bulunamadı.");
+            }
         });
     </script>
 </body>
