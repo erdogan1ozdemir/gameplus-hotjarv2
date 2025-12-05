@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="tr" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Game+ İçin Davranışsal Analitik Araçları Karşılaştırması: Hotjar, Contentsquare ve Microsoft Clarity Stratejik Analizi">
+    <title>Game+ Davranışsal Analitik Strateji Raporu</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@700;800&family=Rajdhani:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* === 1. TEMA DEĞİŞKENLERİ VE TEMEL STİLLER === */
+        :root {
+            --font-family-headings: 'Montserrat', sans-serif;
+            --font-family-special: 'Rajdhani', sans-serif;
+            --font-family-body: 'Inter', sans-serif;
+            --base-font-size: 16px;
+            --sidebar-width: 300px;
+            --card-radius: 12px;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
+        /* GAME+ BRANDING (AÇIK TEMA) */
+        .theme-light {
+            --primary: #00E867; /* Game+ Neon Yeşili */
+            --primary-dark: #00b350; /* Metinlerde okunabilirlik için koyu yeşil */
+            --primary-rgb: 0, 232, 103;
+            --secondary: #111827; /* Neredeyse Siyah */
+            --secondary-rgb: 17, 24, 39;
+            --accent: #F3F4F6;
+            --success: #059669;
+            --warning: #D97706;
+            --danger: #DC2626;
+            --theme-bg: #F3F4F6; /* Açık Gri Arkaplan */
+            --sidebar-bg: #FFFFFF;
+            --card-bg: #FFFFFF;
+            --text-primary: #1F2937;
+            --text-secondary: #4B5563;
+            --border-color: #E5E7EB;
+        }
+
+        html { font-size: var(--base-font-size); scroll-behavior: smooth; }
+
+        body {
+            font-family: var(--font-family-body);
+            background-color: var(--theme-bg);
+            color: var(--text-primary);
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        .container-wrapper { display: flex; }
+
+        /* === 2. YERLEŞİM (LAYOUT) VE GENEL ELEMANLAR === */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            position: fixed;
+            top: 0; left: 0; height: 100vh;
+            display: flex; flex-direction: column;
+            transition: transform 0.3s ease-in-out;
+            z-index: 1000;
+            box-shadow: var(--shadow-lg);
+        }
+        .main-content {
+            margin-left: var(--sidebar-width);
+            width: calc(100% - var(--sidebar-width));
+            padding: 3rem 4rem;
+        }
+        .section {
+            margin-bottom: 6rem;
+            scroll-margin-top: 2rem;
+        }
+        .progress-bar {
+            height: 4px; background-color: var(--primary);
+            width: 0; position: fixed; top: 0; left: 0; z-index: 9999;
+            transition: width 0.1s;
+        }
+        .back-to-top {
+            position: fixed; bottom: 30px; right: 30px;
+            background-color: var(--secondary); color: var(--primary);
+            border: 2px solid var(--primary);
+            width: 50px; height: 50px; border-radius: 50%;
+            display: none; justify-content: center; align-items: center;
+            font-size: 20px; box-shadow: var(--shadow-lg);
+            transition: all 0.3s;
+            z-index: 1000; text-decoration: none;
+        }
+        .back-to-top:hover { background-color: var(--primary); color: #fff; transform: translateY(-3px); }
+        .menu-toggle {
+            position: fixed; top: 20px; left: 20px;
+            background: var(--secondary); color: var(--primary); border: 1px solid var(--border-color);
+            width: 50px; height: 50px; font-size: 24px; border-radius: 50%;
+            cursor: pointer; z-index: 1001; display: none;
+            justify-content: center; align-items: center; box-shadow: var(--shadow-md);
+        }
+
+        /* === 3. BİLEŞEN (COMPONENT) STİLLERİ === */
+
+        /* KENAR ÇUBUĞU */
+        .sidebar-header { padding: 2rem 1.5rem; border-bottom: 1px solid var(--border-color); text-align: center; background: #fff; }
+        .sidebar-header h2 { font-family: var(--font-family-special); font-weight: 800; font-size: 2.2rem; color: var(--secondary); margin:0; letter-spacing: 1px; }
+        .sidebar-header h2 span { color: var(--primary-dark); }
+        .sidebar-header p { color: var(--text-secondary); margin-top: 5px; font-size: 0.85rem; font-weight: 500; }
+        
+        .sidebar-nav-container { overflow-y: auto; flex-grow: 1; padding: 1.5rem 0; }
+        .nav-group { margin-bottom: 2rem; }
+        .nav-title {
+            font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em;
+            color: var(--text-secondary); font-weight: 700;
+            padding: 0 1.5rem 0.5rem; opacity: 0.7;
+        }
+        .nav-item {
+            display: flex; align-items: center; padding: 0.75rem 1.5rem;
+            color: var(--text-secondary); text-decoration: none; font-size: 0.9rem; font-weight: 500;
+            border-left: 3px solid transparent; transition: all 0.2s ease;
+        }
+        .nav-item:hover { background-color: rgba(0, 232, 103, 0.05); color: var(--primary-dark); }
+        .nav-item.active {
+            background-color: rgba(0, 232, 103, 0.1);
+            color: var(--secondary); font-weight: 700;
+            border-left-color: var(--primary);
+        }
+        .nav-item i { width: 24px; text-align: center; margin-right: 0.75rem; font-size: 1rem; color: var(--primary-dark); }
+        .nav-badge {
+            margin-left: auto; font-size: 0.65rem; background: var(--secondary); color: white;
+            border-radius: 4px; padding: 2px 6px; font-weight: 700; letter-spacing: 0.5px;
+        }
+
+        .sidebar-footer { padding: 1.5rem; text-align: center; font-size: 0.75rem; color: var(--text-secondary); border-top: 1px solid var(--border-color); background: #f9fafb; }
+
+        /* RAPOR BAŞLIKLARI */
+        .report-header { margin-bottom: 4rem; text-align: left; border-bottom: 1px solid var(--border-color); padding-bottom: 2rem; }
+        .report-header h1 {
+            font-family: var(--font-family-headings); font-weight: 800; font-size: 3rem;
+            color: var(--secondary); line-height: 1.1; margin-bottom: 1rem;
+        }
+        .report-header h1 span { color: var(--primary-dark); }
+        .report-header .subtitle { color: var(--text-secondary); font-size: 1.25rem; font-weight: 400; max-width: 800px; }
+
+        .section-header { display: flex; align-items: center; margin-bottom: 2.5rem; }
+        .section-icon {
+            width: 50px; height: 50px; background: var(--secondary); border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; margin-right: 20px; color: var(--primary); box-shadow: var(--shadow-md);
+        }
+        .section-title { font-family: var(--font-family-headings); font-size: 2.25rem; font-weight: 700; color: var(--secondary); margin: 0;}
+
+        /* KARTLAR VE İÇERİK */
+        .card {
+            background-color: var(--card-bg); padding: 2rem; border-radius: var(--card-radius);
+            border: 1px solid var(--border-color); margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-sm); transition: all 0.3s ease;
+        }
+        .card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); border-color: var(--primary); }
+        .card h3 { font-family: var(--font-family-headings); font-size: 1.4rem; color: var(--secondary); margin-bottom: 1rem; margin-top: 0; font-weight: 700; }
+        .card p { color: var(--text-secondary); margin-bottom: 1rem; }
+        
+        .list-check { list-style: none; padding: 0; }
+        .list-check li { position: relative; padding-left: 2rem; margin-bottom: 0.75rem; color: var(--text-secondary); }
+        .list-check li::before {
+            content: '\f00c'; font-family: "Font Awesome 6 Free"; font-weight: 900;
+            color: var(--primary-dark); position: absolute; left: 0; top: 3px;
+        }
+
+        /* GRID SİSTEMLERİ */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+        
+        .stat-card {
+            background: white; padding: 1.5rem; border-radius: var(--card-radius);
+            border: 1px solid var(--border-color); text-align: center;
+            box-shadow: var(--shadow-sm); border-top: 4px solid var(--primary);
+        }
+        .stat-val { font-size: 2.5rem; font-weight: 800; color: var(--secondary); font-family: var(--font-family-special); }
+        .stat-label { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); font-weight: 600; margin-top: 0.5rem; }
+
+        /* TABLOLAR */
+        .table-container { overflow-x: auto; background: white; border-radius: var(--card-radius); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); margin: 2rem 0; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f3f4f6; color: var(--secondary); font-weight: 700; text-align: left; padding: 1rem 1.5rem; font-size: 0.85rem; text-transform: uppercase; border-bottom: 2px solid var(--border-color); }
+        td { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); color: var(--text-secondary); font-size: 0.95rem; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background-color: #f9fafb; }
+        
+        .badge-free { background: #d1fae5; color: #065f46; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
+        .badge-paid { background: #fffbeb; color: #92400e; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
+        .check-icon { color: var(--success); }
+        .cross-icon { color: var(--text-secondary); opacity: 0.3; }
+
+        /* NOT KUTULARI */
+        .note-box { padding: 1.25rem; border-radius: 8px; margin: 1.5rem 0; display: flex; gap: 1rem; border-left: 4px solid; font-size: 0.95rem; }
+        .note-info { background: #eff6ff; border-color: #3b82f6; color: #1e40af; }
+        .note-warning { background: #fff7ed; border-color: #f97316; color: #9a3412; }
+        .note-danger { background: #fef2f2; border-color: #dc2626; color: #991b1b; }
+        .note-success { background: #f0fdf4; border-color: var(--primary); color: #166534; }
+        .note-box i { font-size: 1.2rem; margin-top: 2px; }
+
+        /* RESPONSIVE */
+        @media (max-width: 1024px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.active { transform: translateX(0); }
+            .main-content { margin-left: 0; width: 100%; padding: 2rem; }
+            .menu-toggle { display: flex; }
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+            .report-header h1 { font-size: 2.2rem; }
+        }
+    </style>
+</head>
+<body class="theme-light"> 
+    <div class="progress-bar" id="progressBar"></div>
+    <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+    <a href="#" class="back-to-top" id="backToTop"><i class="fas fa-arrow-up"></i></a>
+
+    <div class="container-wrapper">
+        <!-- SIDEBAR -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>GAME<span>+</span></h2>
+                <p>Davranışsal Analitik Raporu</p>
+            </div>
+            <div class="sidebar-nav-container">
+                <nav>
+                    <div class="nav-group">
+                        <div class="nav-title">STRATEJİK BAKIŞ</div>
+                        <ul>
+                            <li><a href="#giris" class="nav-item active"><i class="fas fa-crosshairs"></i><span>1. Giriş: Analitik İhtiyacı</span></a></li>
+                            <li><a href="#hotjar-overview" class="nav-item"><i class="fas fa-fire"></i><span>2. Hotjar & Unified</span></a></li>
+                        </ul>
+                    </div>
+                    <div class="nav-group">
+                        <div class="nav-title">DERİNLEMESİNE ANALİZ</div>
+                        <ul>
+                            <li><a href="#feature-focus" class="nav-item"><i class="fas fa-filter"></i><span>3. Kritik Özellikler</span><span class="nav-badge">ÖNEMLİ</span></a></li>
+                            <li><a href="#microsoft-clarity" class="nav-item"><i class="fas fa-search"></i><span>4. Microsoft Clarity</span></a></li>
+                            <li><a href="#comparison" class="nav-item"><i class="fas fa-balance-scale"></i><span>5. Karşılaştırma</span></a></li>
+                        </ul>
+                    </div>
+                    <div class="nav-group">
+                        <div class="nav-title">SONUÇ VE KARAR</div>
+                        <ul>
+                            <li><a href="#pricing" class="nav-item"><i class="fas fa-coins"></i><span>6. Ücretlendirme</span></a></li>
+                            <li><a href="#scenarios" class="nav-item"><i class="fas fa-chess"></i><span>7. Karar Senaryoları</span></a></li>
+                        </ul>
+                    </div>
+                </nav>
+            </div>
+            <div class="sidebar-footer">
+                <p>Hazırlayan: <strong>Inbound SEO</strong></p>
+                <p>Tarih: Aralık 2025</p>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            <header class="report-header">
+                <h1>GAME+ <br><span>DAVRANIŞSAL ANALİTİK</span> <br>STRATEJİ RAPORU</h1>
+                <p class="subtitle">Hotjar (Contentsquare) ve Microsoft Clarity ile Kullanıcı Deneyimi ve Dönüşüm Optimizasyonu Yol Haritası</p>
+            </header>
+
+            <!-- 1. BÖLÜM: GİRİŞ -->
+            <section id="giris" class="section">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fas fa-crosshairs"></i></div>
+                    <h2 class="section-title">1. Giriş: Neden Davranışsal Analitik?</h2>
+                </div>
+
+                <div class="note-box note-info">
+                    <i class="fas fa-info-circle"></i>
+                    <div>
+                        <strong>Yönetici Özeti:</strong> Game+ gibi abonelik tabanlı modellerde, klasik analitik araçları (GA4) "ne olduğunu" gösterirken, davranışsal analitik "neden olduğunu" (Örn: Ödeme hatası, UX karışıklığı) görselleştirir.
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <h3><i class="fas fa-road"></i> Game+ İş Modeli ve Kritik Yol</h3>
+                        <p>Game+, kullanıcılarına bulut tabanlı oyun deneyimi sunan bir abonelik platformudur. Kullanıcının başarıya giden yolu doğrusal bir huni izler:</p>
+                        <ul class="list-check">
+                            <li><strong>Landing:</strong> Karşılama ve değer önerisi.</li>
+                            <li><strong>Paket Seçimi:</strong> Fiyat ve özellik karşılaştırma (Karar anı).</li>
+                            <li><strong>Giriş/Kayıt:</strong> Hesap oluşturma sürtünmesi.</li>
+                            <li><strong>Ödeme:</strong> Satın alma işleminin tamamlanması.</li>
+                            <li><strong>İlk Oyun:</strong> Ürünü deneyimleme (Aha moment).</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h3><i class="fas fa-eye-slash"></i> GA4 ile Görülemeyenler (Kör Noktalar)</h3>
+                        <p>Mevcut analitik kurulumunda aşağıdaki sorular yanıtlanamamaktadır:</p>
+                        <div class="table-container" style="margin:0; box-shadow:none; border:none;">
+                            <table style="font-size: 0.9rem;">
+                                <tr>
+                                    <td><strong>Kullanıcı Takılmaları</strong></td>
+                                    <td>Formlarda validasyon hatası mı alıyorlar yoksa fiyatı mı pahalı buluyorlar?</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Ölü Tıklamalar</strong></td>
+                                    <td>Tıklanabilir sanılan görsellere tıklayıp tepki alamayınca mı çıkıyorlar?</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Teknik Hatalar</strong></td>
+                                    <td>Ödeme API'si yanıt vermediğinde kullanıcının ekranında ne görünüyor?</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="border-left: 5px solid var(--primary);">
+                    <h3><i class="fas fa-bullseye"></i> Raporun Hedefi</h3>
+                    <p>“Kullanıcıların neden drop olduğunu (bıraktığını), neleri yapmaya çalıştığını ve nerede tökezlediğini” görselleştirmek; Abonelik dönüşüm oranını ve ilk oturum başarısını maksimize etmek.</p>
+                </div>
+            </section>
+
+            <!-- 2. BÖLÜM: HOTJAR NEDİR? -->
+            <section id="hotjar-overview" class="section">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fas fa-fire"></i></div>
+                    <h2 class="section-title">2. Hotjar Nedir & Problemleri Çözer?</h2>
+                </div>
+
+                <div class="card">
+                    <h3>Dijital Deneyim Analitiği (DXP) Platformu</h3>
+                    <p>Hotjar, artık sadece bir ısı haritası aracı değil; <strong>Contentsquare</strong> ile birleşerek geniş kapsamlı bir "Dijital Deneyim Platformu"na dönüşmüştür. Bu birleşme, aracı basit bir izleme aracından, yapay zeka destekli bir içgörü motoruna çevirmiştir.</p>
+                    
+                    <div class="grid-3" style="margin-top: 2rem;">
+                        <div class="stat-card" style="border-top-color: #FD385D;">
+                            <div class="stat-val"><i class="fas fa-map-marked-alt"></i></div>
+                            <div class="stat-label">Isı Haritaları</div>
+                            <p style="font-size: 0.9rem; margin-top: 10px;">Tıklama, kaydırma ve odaklanma yoğunluğu.</p>
+                        </div>
+                        <div class="stat-card" style="border-top-color: #FD385D;">
+                            <div class="stat-val"><i class="fas fa-video"></i></div>
+                            <div class="stat-label">Session Replay</div>
+                            <p style="font-size: 0.9rem; margin-top: 10px;">Kullanıcı oturumlarının video kaydı.</p>
+                        </div>
+                        <div class="stat-card" style="border-top-color: #FD385D;">
+                            <div class="stat-val"><i class="fas fa-filter"></i></div>
+                            <div class="stat-label">Funnels</div>
+                            <p style="font-size: 0.9rem; margin-top: 10px;">Adım adım dönüşüm kayıpları.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Game+ Açısından Çözülen Problemler</h3>
+                    <ul class="list-check">
+                        <li><strong>Paket Sayfalarındaki Drop-off:</strong> Kullanıcılar fiyat tablosunu inceliyor mu? Özellikleri okuyor mu? Isı haritaları ile bu soruların cevabı nettir.</li>
+                        <li><strong>Hata ve Bug Tespiti:</strong> Ödeme adımında "Dönüp duran yükleme ikonları" veya hata mesajları Session Replay ile kanıtlanır.</li>
+                        <li><strong>Segmentasyon:</strong> "Yeni Kullanıcı" vs "Geri Dönen Kullanıcı" davranış farklarının analizi.</li>
+                        <li><strong>Ortak Dil:</strong> Pazarlama ve Yazılım ekiplerinin, soyut veriler yerine somut kullanıcı videoları üzerinden konuşabilmesi.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- 3. BÖLÜM: KRİTİK ÖZELLİKLER -->
+            <section id="feature-focus" class="section">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fas fa-filter"></i></div>
+                    <h2 class="section-title">3. Game+ İçin Kritik İki Özellik</h2>
+                </div>
+
+                <!-- 3.1 Funnels -->
+                <div class="card">
+                    <h3>3.1. Hotjar Funnels (Huni Analizi)</h3>
+                    <p>Kullanıcı yolculuğunu modeller ve "Conversion" (Dönüşüm) hunisindeki en büyük çatlakları gösterir. Hotjar'ın bu özelliği, GA4'ten farklı olarak, düşüş yaşanan adımı <strong>direkt izlemenizi (Watch Drop-off)</strong> sağlar.</p>
+
+                    <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                        <h4 style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 15px;">Game+ Detaylı Funnel Analiz Tablosu:</h4>
+                        <div class="table-container" style="margin:0;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Funnel Adımı</th>
+                                        <th>GA4 ile Görülebilen</th>
+                                        <th>Hotjar/Clarity ile Yeni Görünürlük</th>
+                                        <th>Fayda</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>1. Landing (Paket Seçim)</td>
+                                        <td>Sayfa ziyareti, Dönüşüm Oranı</td>
+                                        <td>Hangi elemente tıklanmadı? Scroll derinliği nedir?</td>
+                                        <td>Paket seçiminde kararsızlık analizi</td>
+                                    </tr>
+                                    <tr>
+                                        <td>2. Giriş/Kayıt</td>
+                                        <td>Event tracking (varsa)</td>
+                                        <td>Form doldurma zorlukları, Validasyon hataları</td>
+                                        <td>Kayıt sürtünmesini azaltma</td>
+                                    </tr>
+                                    <tr>
+                                        <td>3. Ödeme Sayfası</td>
+                                        <td>Checkout Drop-off %</td>
+                                        <td>Ödeme API hataları, Tıklanmayan butonlar, Rage Clicks</td>
+                                        <td>Ödeme başarı oranını artırma</td>
+                                    </tr>
+                                    <tr>
+                                        <td>4. İlk Oyun Başlatma</td>
+                                        <td>Oyun Başlatıldı (Event)</td>
+                                        <td>Loading süreleri, UI tanıma sorunları, Bekleme süreleri</td>
+                                        <td>"Aha Moment"a ulaşma süresini kısaltma</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="note-box note-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>
+                            <strong>Kritik Not:</strong> Microsoft Clarity'de "Funnel" özelliği yoktur. Sadece dashboard üzerinden genel bakış sağlar. Detaylı adım-adım huni analizi için Hotjar (veya Contentsquare) şarttır.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3.2 Unified Platform -->
+                <div class="card">
+                    <h3>3.2. Hotjar + Contentsquare (Unified Platform)</h3>
+                    <p>Contentsquare birleşmesiyle gelen en büyük yenilik, manuel analiz yerine <strong>Yapay Zeka (AI)</strong> destekli içgörülerin sunulmasıdır.</p>
+                    
+                    <div class="grid-3">
+                        <div class="stat-card">
+                            <div class="stat-label" style="color: var(--primary-dark);">AI Insights (Sense)</div>
+                            <p style="font-size: 0.85rem; margin-top: 5px;">Sistem otomatik olarak: "Dün ödeme sayfasında rage click %20 arttı, kontrol et" uyarısı verir.</p>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label" style="color: var(--primary-dark);">Frustration Score</div>
+                            <p style="font-size: 0.85rem; margin-top: 5px;">Her oturuma 1-5 arası puan verir. Kullanıcı sinirlendi mi (Hızlı geri dönme, çoklu tıklama)?</p>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label" style="color: var(--primary-dark);">Impact Quantification</div>
+                            <p style="font-size: 0.85rem; margin-top: 5px;">"Bu hatayı düzeltirsen yıllık X TL daha fazla kazanırsın" şeklinde etki analizi yapar.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. BÖLÜM: CLARITY -->
+            <section id="microsoft-clarity" class="section">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fas fa-search"></i></div>
+                    <h2 class="section-title">4. Microsoft Clarity Nedir?</h2>
+                </div>
+
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1rem;">
+                        <h3>%100 Ücretsiz Davranış Analitiği</h3>
+                        <span class="badge-free" style="font-size: 1rem; padding: 6px 12px;">TAMAMEN ÜCRETSİZ</span>
+                    </div>
+                    <p>Microsoft'un sunduğu, trafik limiti olmayan, örneklem (sampling) yapmayan ve kurulumu dakikalar süren güçlü bir alternatiftir. Game+ trafiğinin tamamını maliyetsiz kaydeder.</p>
+
+                    <div class="grid-3">
+                        <div class="stat-card" style="border-top-color: #0078D4;">
+                            <div class="stat-val" style="color: #0078D4;">∞</div>
+                            <div class="stat-label">Sınırsız Oturum</div>
+                            <p style="font-size: 0.85rem;">Tüm Game+ trafiğini veri kaybı olmadan kaydeder.</p>
+                        </div>
+                        <div class="stat-card" style="border-top-color: #0078D4;">
+                            <div class="stat-val" style="color: #0078D4;"><i class="fas fa-bolt"></i></div>
+                            <div class="stat-label">Otomatik Heatmap</div>
+                            <p style="font-size: 0.85rem;">Ekstra ayar yapmadan tüm sayfalar için harita üretir.</p>
+                        </div>
+                        <div class="stat-card" style="border-top-color: #0078D4;">
+                            <div class="stat-val" style="color: #0078D4;"><i class="fas fa-bug"></i></div>
+                            <div class="stat-label">Akıllı Etiketler</div>
+                            <p style="font-size: 0.85rem;">Rage Click, Dead Click, Quick Back gibi sorunları otomatik etiketler.</p>
+                        </div>
+                    </div>
+
+                    <h4 style="margin-top: 1.5rem;">Game+ İçin Özel Clarity Özellikleri:</h4>
+                    <ul class="list-check">
+                        <li><strong>Rage Clicks:</strong> Kullanıcının sinirlenip üst üste tıkladığı alanlar (Örn: Çalışmayan 'Satın Al' butonu).</li>
+                        <li><strong>Dead Clicks:</strong> Tıklanabilir görünen ama işlevi olmayan elementler.</li>
+                        <li><strong>Excessive Scrolling:</strong> Kullanıcının aradığını bulamayıp sayfada kaybolduğu anlar.</li>
+                        <li><strong>GA4 Entegrasyonu:</strong> Google Analytics verileriyle Clarity kayıtlarını eşleştirerek analiz derinliği sağlama.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- 5. BÖLÜM: KARŞILAŞTIRMA -->
+            <section id="comparison" class="section">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fas fa-balance-scale"></i></div>
+                    <h2 class="section-title">5. Hotjar vs. Clarity: Kapsamlı Karşılaştırma</h2>
+                </div>
+                
+                <p style="margin-bottom: 1.5rem;">Aşağıdaki tablo, Game+ ihtiyaçları ve sağlanan dökümanlar baz alınarak hazırlanmış en güncel karşılaştırmadır.</p>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 25%;">Özellik / Kriter</th>
+                                <th style="width: 35%; color: #0078D4;">Microsoft Clarity (Free)</th>
+                                <th style="width: 40%; color: #FD385D;">Hotjar / Contentsquare (Paid)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Maliyet</strong></td>
+                                <td><span class="badge-free">₺0 (Tamamen Ücretsiz)</span></td>
+                                <td><span class="badge-paid">€/₺ Ücretli (Trafik Bazlı)</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Aylık Session Limiti</strong></td>
+                                <td>Sınırsız (Tüm Trafik)</td>
+                                <td>20.000 (Free) - Plan Bazlı Artar</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Sampling (Örneklem)</strong></td>
+                                <td><i class="fas fa-check check-icon"></i> Yok (Tüm veriyi alır)</td>
+                                <td><i class="fas fa-exclamation-triangle" style="color:var(--warning)"></i> Var (Limiti aşınca durur)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Funnel Analizi</strong></td>
+                                <td><i class="fas fa-times cross-icon"></i> Yok</td>
+                                <td><i class="fas fa-check check-icon"></i> <strong>Gelişmiş & Detaylı</strong></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Anket & Feedback</strong></td>
+                                <td><i class="fas fa-times cross-icon"></i> Yok</td>
+                                <td><i class="fas fa-check check-icon"></i> Entegre Widgetlar</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Veri Saklama</strong></td>
+                                <td>30 Gün (Favoriler 13 Ay)</td>
+                                <td>12+ Ay (Pakete Bağlı)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>AI & İçgörü</strong></td>
+                                <td>Temel (Copilot)</td>
+                                <td><strong>Gelişmiş (Sense AI)</strong></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Rage & Dead Clicks</strong></td>
+                                <td><i class="fas fa-check check-icon"></i> Otomatik Etiketler</td>
+                                <td><i class="fas fa-check check-icon"></i> Var</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Frustration Score</strong></td>
+                                <td><i class="fas fa-times cross-icon"></i> Yok</td>
+                                <td><i class="fas fa-check check-icon"></i> Var (Puanlama)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Entegrasyonlar</strong></td>
+                                <td>GA4, Google Ads</td>
+                                <td>Slack, Jira, Segment, Hubspot</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <canvas id="radarChart"></canvas>
+                    </div>
+                    <div class="card">
+                        <h3>Kritik Fark Özeti</h3>
+                        <p><strong>Clarity</strong> "Ne oluyor?" sorusuna hızlı, ücretsiz ve limitsiz cevap verir. Mükemmel bir "Monitoring" (İzleme) aracıdır.</p>
+                        <p><strong>Hotjar</strong> "Huni nerede kırılıyor ve kullanıcı ne diyor?" sorularına cevap verir. Bir "Optimization" (Optimizasyon) aracıdır.</p>
+                        <p>Game+ için en büyük eksiklik, Clarity'de <strong>Funnel</strong> ve <strong>Survey</strong> özelliklerinin olmamasıdır.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. BÖLÜM: ÜCRETLENDİRME -->
+            <section id="pricing" class="section">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fas fa-coins"></i></div>
+                    <h2 class="section-title">6. Ücretlendirme & Fayda Çerçevesi</h2>
+                </div>
+
+                <div class="note-box note-danger">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <div>
+                        <strong>UYARI: "Sampling Bias" (Örneklem Hatası)</strong><br>
+                        Hotjar'ın Ücretsiz (Free) planı günde sadece <strong>35 oturum</strong> kaydeder. Game+ gibi günlük binlerce ziyaretçisi olan bir sitede bu, verinin %99'unun kaybolması demektir. Bu veriye bakarak karar almak yanıltıcı olabilir.
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <h3>Upgrade Maliyeti (Tahmini)</h3>
+                        <p>Contentsquare/Hotjar Growth veya Business paketlerine geçiş için öngörülen başlangıç maliyetleri:</p>
+                        <div class="stat-val" style="color: var(--secondary);">~₺400-500<span style="font-size: 1rem; color: var(--text-secondary); font-weight: 400;"> / Ay*</span></div>
+                        <p style="font-size: 0.8rem; margin-top: 10px; opacity: 0.7;">*Contentsquare Growth planı başlangıç seviyesidir. Trafik hacmine göre fiyat ölçeklenir.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Yatırım Getirisi (ROI)</h3>
+                        <p>Maliyeti haklı çıkarmak için sorulacak soru:</p>
+                        <p><em>"Bu araç sayesinde yakaladığımız hataları düzelterek Abonelik Dönüşüm Oranını %0.5 artırırsak, elde edeceğimiz ek gelir araç maliyetini geçer mi?"</em></p>
+                        <p><strong>Cevap:</strong> Game+ ölçeğinde ve ARPU (Kullanıcı Başı Gelir) düşünüldüğünde cevap kesinlikle <strong>EVET</strong>.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 7. BÖLÜM: KARAR SENARYOLARI -->
+            <section id="scenarios" class="section">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fas fa-chess"></i></div>
+                    <h2 class="section-title">7. Karar Senaryoları</h2>
+                </div>
+
+                <div class="card" style="border-left: 5px solid var(--text-secondary);">
+                    <h3>Senaryo A: Sadece Clarity (MVP - Ücretsiz)</h3>
+                    <p><strong>Durum:</strong> Ek bütçe yok, hızlı kurulum isteniyor. "Quick Win" odaklı.</p>
+                    <ul class="list-check">
+                        <li><span style="color: var(--success); font-weight: bold;">+</span> 0 Maliyet, Sınırsız veri, GA4 Entegrasyonu.</li>
+                        <li><span style="color: var(--danger); font-weight: bold;">-</span> Funnel analizi yok, Anket yok. Kullanıcıların "neden" satın almadığını sormak imkansız.</li>
+                    </ul>
+                </div>
+
+                <div class="card" style="border-left: 5px solid var(--primary); background: #f0fdf4;">
+                    <h3>Senaryo B: Hibrit Model (Önerilen - Balanced)</h3>
+                    <p><strong>Durum:</strong> Verim odaklı bütçe kullanımı.</p>
+                    <ul class="list-check">
+                        <li><strong>Microsoft Clarity:</strong> Tüm site genelinde (Landing, Blog, Katalog) "Hata Tespiti" ve genel ısı haritaları için kullanılır (Ücretsiz).</li>
+                        <li><strong>Hotjar (Paid):</strong> Sadece kritik "Checkout" ve "Paket Seçimi" sayfalarında çalıştırılarak, Funnel ve Anket özellikleri için bütçe verimli kullanılır.</li>
+                    </ul>
+                </div>
+
+                <div class="card" style="border-left: 5px solid #FD385D;">
+                    <h3>Senaryo C: Sadece Contentsquare (Premium - Comprehensive)</h3>
+                    <p><strong>Durum:</strong> Tek platform, tam entegrasyon isteği. Kurumsal çözüm.</p>
+                    <ul class="list-check">
+                        <li><span style="color: var(--success); font-weight: bold;">+</span> Tüm veriler (Funnel, Heatmap, AI Sense) tek çatı altında. Gelişmiş destek ve Jira entegrasyonu.</li>
+                        <li><span style="color: var(--danger); font-weight: bold;">-</span> Yüksek trafikli yapıda maliyet artabilir.</li>
+                    </ul>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Chart.js Ayarları
+            Chart.register(ChartDataLabels);
+            Chart.defaults.font.family = "'Inter', sans-serif";
+            Chart.defaults.color = "#4B5563";
+            Chart.defaults.borderColor = "#E5E7EB";
+
+            // Etkileşimler
+            const sidebar = document.getElementById('sidebar');
+            const menuToggle = document.getElementById('menuToggle');
+            const navLinks = document.querySelectorAll('.nav-item');
+            const backToTopBtn = document.getElementById('backToTop');
+            const progressBar = document.getElementById('progressBar');
+
+            menuToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                sidebar.classList.toggle('active');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (window.innerWidth <= 1024 && sidebar.classList.contains('active') && !sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
+                    sidebar.classList.remove('active');
+                }
+            });
+
+            // Scroll Logic
+            function handleScroll() {
+                const totalScroll = document.documentElement.scrollTop;
+                const windowHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+                const scroll = `${totalScroll / windowHeight}`;
+                progressBar.style.width = `${scroll * 100}%`;
+
+                if (totalScroll > 300) {
+                    backToTopBtn.style.display = "flex";
+                } else {
+                    backToTopBtn.style.display = "none";
+                }
+            }
+            window.addEventListener('scroll', handleScroll);
+
+            // Smooth Scroll & Active Link
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        navLinks.forEach(link => {
+                            link.classList.remove('active');
+                            if (link.getAttribute('href').substring(1) === entry.target.id) {
+                                link.classList.add('active');
+                            }
+                        });
+                    }
+                });
+            }, { threshold: 0.3 });
+
+            document.querySelectorAll('section').forEach(section => observer.observe(section));
+
+            // GRAFİKLER
+            
+            // 1. Funnel Chart
+            const funnelCtx = document.getElementById('funnelChart').getContext('2d');
+            new Chart(funnelCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Landing (100%)', 'Paket Seçimi (65%)', 'Giriş/Kayıt (40%)', 'Ödeme (25%)', 'İlk Oyun (18%)'],
+                    datasets: [{
+                        label: 'Kullanıcı Akışı',
+                        data: [100, 65, 40, 25, 18],
+                        backgroundColor: [
+                            '#00E867', 
+                            '#00E867',
+                            'rgba(0, 232, 103, 0.6)',
+                            'rgba(0, 232, 103, 0.4)',
+                            'rgba(0, 232, 103, 0.2)'
+                        ],
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: (ctx) => `${ctx.raw}% Tamamlama` } },
+                        datalabels: { anchor: 'end', align: 'end', formatter: (val) => `%${val}` }
+                    },
+                    scales: { x: { display: false, max: 110 }, y: { grid: { display: false } } }
+                }
+            });
+
+            // 2. Radar Chart
+            const radarCtx = document.getElementById('radarChart').getContext('2d');
+            new Chart(radarCtx, {
+                type: 'radar',
+                data: {
+                    labels: ['Maliyet', 'Funnel', 'Veri Saklama', 'AI İçgörü', 'Kullanım Kolaylığı', 'Trafik Limiti'],
+                    datasets: [{
+                        label: 'Clarity (Free)',
+                        data: [10, 2, 4, 3, 9, 10],
+                        backgroundColor: 'rgba(0, 120, 212, 0.2)',
+                        borderColor: '#0078D4',
+                        pointBackgroundColor: '#0078D4'
+                    }, {
+                        label: 'Hotjar (Paid)',
+                        data: [4, 10, 8, 9, 7, 6],
+                        backgroundColor: 'rgba(253, 56, 93, 0.2)',
+                        borderColor: '#FD385D',
+                        pointBackgroundColor: '#FD385D'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { r: { suggestMin: 0, suggestMax: 10, ticks: { display: false } } }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
